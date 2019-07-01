@@ -1,0 +1,17 @@
+#%RAML 1.0 Trait
+
+responses:
+      401:
+        body:
+          application/json:
+            example:
+             {
+                "message" : "Authorization Failed"
+             }
+      400:
+        body:
+          application/json:
+            example:
+              {
+                "message" : "Bad Request"
+              }       

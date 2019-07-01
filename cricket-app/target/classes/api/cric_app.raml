@@ -1,0 +1,149 @@
+#%RAML 1.0
+baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/6fee964c-c658-4b7d-9605-a7515e50235a/ # 
+version: v1
+title: Cric App-Schedule-Live Scores-Player Data
+
+traits:
+    error:  !include traits/errorTrait.raml
+
+/schedule:
+  description: Provides upcoming match schedule of various teams from all leagues and formats,till a week ahead from current day.
+  get:
+    queryParameters:
+      team:
+        description: Can be used to specify match schedule of any particular team
+        required: false
+        type: string
+        example:
+          Australia
+    responses:
+      200:
+        body:
+          application/json :
+             example: !include responses/scedule_response.json
+      430:
+        description: When no match schedule was found for the requested team
+        body:
+          application/json:
+            example:
+              {
+                "message": "Match schedule not found"
+              }           
+    is: [error]
+              
+  
+/scheduleDate:
+  description: Provides upcoming match schedule of various teams from all leagues   and formats for a given date
+  get:
+    queryParameters:
+      date:
+        description: Accepts only YYYY-MM-DD
+        required: true
+        type: date-only
+        example: 
+          2019-06-06
+      team:
+        description: Can be used to specify match schedule of any particular team
+        required: false
+        type: string
+        example:
+          Australia 
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include responses/scedule_response.json
+    is: [error]
+
+/schedulePeriod:
+  description: Provides upcoming match schedule of various teams from all leagues   and formats,in required time period.
+  get:
+    queryParameters:
+      startDate:
+        description: Schedule period start date,accepts only YYYY-MM-DD 
+        required: true
+        type: date-only
+        example: 
+          2019-06-06
+      endDate:
+        description: Schedule period end date,accepts only YYYY-MM-DD
+        required: true
+        type: date-only
+        example: 
+          2019-06-12
+      team:
+        description: Can be used to specify match schedule of any particular team
+        required: false
+        type: string
+        example:
+          Australia        
+    responses:
+      200:
+        body:
+          application/json :
+            example: !include responses/scedule_response.json
+    is: [error]  
+
+/score:
+  description: Provides real-time match score of cricket match between requested teams that were in progress
+  get:
+    queryParameters:
+      team1:
+        description: Team Name  
+        required: true
+        type: string
+        example:
+          New Zealand
+      team2:
+        description: Team Name
+        required: true 
+        type: string 
+        example:
+          South Africa
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include responses/score_response.json
+      430:
+        description: When a live match was not found between requested two teams
+        body:
+          application/json:
+            example:
+              {
+                   "message": "Live match not found"
+              }      
+    is: [error] 
+
+/player:
+  description: Can search and display the most relevant result found about a player along with his game stats
+  get:
+    queryParameters:
+      name:
+        description: player name
+        required: true
+        type: string
+        example:
+          Raina
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              !include responses/player_response.json  
+      430:
+        description: When an invalid search is made or when no player was found           with the requested name
+        body:
+          application/json:
+            example:
+              {
+                "message" :" Player Not Found,Please try with a proper name "
+              }        
+    is: [ error]
+                  
+              
+                          
+      
+    
+
+ 

@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="a5ad63ff-4f44-422d-8ee9-735a0d0af750" basePath="${secure::http.request.basePath}" >
+		<http:request-connection host="${secure::https.host}" protocol="HTTPS">
+			<tls:context >
+				<tls:trust-store path="${secure::truststore.path}" password="${secure::truststore.password}" type="jks"/>
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="f938bf48-e170-4d93-9e3b-e6fc3ac98066" />
+	<validation:config name="Validation_Config" doc:name="Validation Config" doc:id="bfdd8299-f1c8-4071-b553-bc7b3b22eee1" />
+	<flow name="allMatchesData" doc:id="3ae49e68-f278-4464-ab55-8972ef1d1da9" >
+		<http:request method="GET" doc:name="Request" doc:id="84c39426-fe6f-4c93-b042-1b027944c32e" config-ref="HTTP_Request_configuration" path="/matchCalendar" >
+			<ee:repeatable-file-store-stream bufferUnit="MB" />
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"apikey" : "${secure::api.key}"
+}]]]></http:query-params>
+		</http:request>
+		<logger level="DEBUG" doc:name="Logger" doc:id="8221f8ad-cd1c-44d5-9fbc-b63468dda9e2" message="#[payload]"/>
+	</flow>
+	<flow name="schedulePeriod-appFlow" doc:id="32f16966-3c7f-48e1-9873-692b6f30935e" >
+		<set-variable value='#[attributes.queryParams.team default ""]' doc:name="Set Variable" doc:id="8c65e575-070a-4d73-b684-189c5325a308" variableName="team"/>
+		<ee:transform doc:name="Set Dates" doc:id="d678b1a0-fcfa-4dfe-b13c-bce3cb68e1f5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="fromDate" ><![CDATA[attributes.queryParams.startDate]]></ee:set-variable>
+				<ee:set-variable variableName="toDate" ><![CDATA[attributes.queryParams.endDate]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="4834ee1a-21e4-4bd7-8730-b54d00694b64" name="allMatchesData" />
+		<ee:transform doc:name="Transform Message" doc:id="cb1f1c0c-24cb-4e69-9018-e8e214427fb8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+
+
+var scheduleStartDate=vars.fromDate as Date{format : "yyyy-M-d"} as String
+
+var scheduleLastDate=vars.toDate as Date{format : "yyyy-M-d"} as String
+
+fun TransformDate(date)={
+
+out: date as Date {format : "d MMMM yyyy" } as String 
+
+}
+
+output application/json
+
+---
+
+payload.data filter(  ( TransformDate($.date).out >= scheduleStartDate )	and 
+					  ( TransformDate($.date).out <= scheduleLastDate  )    and
+					  ( (upper($.name) contains upper(vars.team)) 
+				   )  	
+					
+) map
+{
+	name:$.name,
+	date:$.date
+}  ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="scheduleDate-appFlow" doc:id="69c00fab-df67-43d7-8d3d-7d14b532dd79" >
+		<ee:transform doc:name="Transform Message" doc:id="1565e821-1152-4588-98ef-69698420d7d8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="team" ><![CDATA[attributes.queryParams.team default ""]]></ee:set-variable>
+				<ee:set-variable variableName="date" ><![CDATA[attributes.queryParams.date]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="ad395236-8d5b-4ce2-9e55-8d7359d96637" name="allMatchesData" />
+		<ee:transform doc:name="Transform Message" doc:id="af7365b0-394f-40ab-b1b5-14361dc2c105" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+
+
+var matchDate=vars.date as Date{format : "yyyy-M-d"} as String
+
+fun TransformDate(date)={
+
+out: date as Date {format : "d MMMM yyyy" } as String 
+
+}
+
+output application/json
+
+---
+
+payload.data filter( (TransformDate($.date).out == matchDate) and (upper($.name) contains upper(vars.team)) )map
+{
+	name:$.name,
+	date:$.date
+} 	]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="date" ><![CDATA[%dw 2.0
+output application/json
+---
+attributes.queryParams.date]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</flow>
+	<flow name="schedule-appFlow" doc:id="4677f497-721e-4870-bf17-649171c903e7" >
+		<set-variable value='#[attributes.queryParams.team default ""]' doc:name="Set Variable" doc:id="aa90a517-1a70-4345-8277-0901fc7d93e3" variableName="team" />
+		<flow-ref doc:name="Flow Reference" doc:id="222cebbf-fca9-4822-8a4b-e23a3ce27f6e" name="allMatchesData" />
+		<ee:transform doc:name="Transform Message" doc:id="83b9fbe1-22d4-4060-be30-e9cc80b8d68c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+
+var targetDate=(now() as Date {format : "yyyy-MM-dd" } + |P7D|)  as String
+
+fun TransformDate(date)={
+
+out: date as Date {format : "d MMMM yyyy" } as String 
+
+}
+
+output application/json
+
+---
+
+payload.data filter((TransformDate($.date).out <= targetDate) and (upper($.name) contains upper(vars.team)) ) map
+{
+	name:$.name,
+	date:$.date
+} 	]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="score_flow" doc:id="5c32331c-4b25-4877-b808-45b74129a9a7" >
+		<ee:transform doc:name="Transform Message" doc:id="0ae9ef99-3baa-4acd-9c7c-debd2c23e0cc">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="team1"><![CDATA[%dw 2.0
+output application/json
+---
+attributes.queryParams.team1]]></ee:set-variable>
+				<ee:set-variable variableName="team2" ><![CDATA[%dw 2.0
+output application/json
+---
+attributes.queryParams.team2]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="GET" doc:name="Request" doc:id="3227b13b-177d-437f-abfa-728eba61297f" config-ref="HTTP_Request_configuration" path="/matches">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"apikey" : "${secure::api.key}"
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="067d7bb6-9de0-40be-a094-612b753a4202" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+
+output application/json
+---
+(payload.matches filter( 
+						( upper($."team-1") == upper(vars.team1)   or
+						  upper($."team-1") == upper(vars.team2) ) and
+						( upper($."team-2") == upper(vars.team1)   or 
+						  upper($."team-2") == upper(vars.team2) ) and
+						( upper(vars.team1) != upper(vars.team2)  )   
+                       ) ) ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[payload[0].unique_id]" doc:name="Set Variable" doc:id="f20607ac-1e5b-4c9f-b4f3-e224c9c15500" variableName="matchId"/>
+		<logger level="DEBUG" doc:name="Logger" doc:id="68911a81-afad-431a-9631-7134119b825b" message='"Match Id :" +#[vars.matchId]'/>
+		<validation:is-not-null doc:name="Is not null" doc:id="03dbbf3f-578e-42c2-a032-015e4fc170fb" value="#[payload[0].unique_id]" message="Live match not found"/>
+		<http:request method="GET" doc:name="Request" doc:id="adad5178-fc7a-4a9b-80b7-8019c19c76b1" config-ref="HTTP_Request_configuration" path="/cricketScore">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"apikey" : "${secure::api.key}",
+	"unique_id" : vars.matchId
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="31c1b0b2-c207-4b11-b3c9-6c0aa7631864" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Score:payload.score
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	
+	<flow name="playerIdFinder-appFlow" doc:id="5cbb6fc3-d573-488a-85e3-c2db975f73b7" >
+		<os:retrieve doc:name="Retrieve" doc:id="df04bc24-ae1a-47a0-9d73-d67c0ddaed96" key="#[vars.name]" objectStore="Object_store" />
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="bdfc88f9-f5ae-4d14-83f9-a30d95e50879" variableName="playerId"/>
+		<logger level="INFO" doc:name="Logger" doc:id="cf0b4bea-2525-444b-a1f4-73868e27c348" message="#[message]"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c9451025-a2a6-430b-ad63-b8b6fb20d499" when="OS" type="OS:KEY_ALREADY_EXISTS, OS:KEY_NOT_FOUND, OS:NULL_VALUE, OS:STORE_NOT_AVAILABLE">
+				<http:request method="GET" doc:name="Request" doc:id="6bb8097b-9614-4cd8-871c-16743ddb8fd1" config-ref="HTTP_Request_configuration" path="/playerFinder" >
+					<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"apikey" : "${secure::api.key}",
+	"name" : vars.name
+}]]]></http:query-params>
+				</http:request>
+				<logger level="DEBUG" doc:name="Logger" doc:id="939b8b88-4ca1-4e1d-8774-cb9df587aafb" message="#[payload]"/>
+				<set-variable value="#[payload.data[0].pid]" doc:name="player id" doc:id="d9b574ca-e3d6-4b1f-9304-a14c5fcd88a4" variableName="playerId" />
+				<os:store doc:name="Store" doc:id="e74b6e38-fc45-4532-9e8b-1e734bcefe8f" key="#[vars.name]" objectStore="Object_store">
+					<os:value ><![CDATA[#[payload.data[0].pid]]]></os:value>
+				</os:store>
+				<logger level="DEBUG" doc:name="Logger" doc:id="f8f6abfb-4851-4441-bdc9-708b41b52757" message='#[vars.playerId]  + " : Saved in Object store"'/>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	<flow name="playerFlow" doc:id="5919db80-7301-4a3f-895e-c54045d71ad3" >
+		<set-variable value="#[attributes.queryParams.name]" doc:name="Set Variable" doc:id="e5ec9c9e-ebb8-4dd4-a004-6fd03e7d0698" variableName="name"/>
+		<flow-ref doc:name="Flow Reference" doc:id="f07fe31e-172e-4060-924c-5b3b323447ac" name="playerIdFinder-appFlow"/>
+		<validation:is-not-null doc:id="1e3e8162-bc10-47cd-bdc9-4420a57ee76d" config-ref="Validation_Config" value="#[vars.playerId]" message="Player Not Found,Please try a proper name"/>
+		<http:request method="GET" doc:name="Request" doc:id="645ea320-b767-41e9-a2ba-1bc4ca121e46" config-ref="HTTP_Request_configuration" path="/playerStats">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"apikey" : "${secure::api.key}",
+	"pid" : vars.playerId
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="7ea97637-e273-449c-99f2-bd234ae8f534" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+
+{
+	"Full Name"    :payload.fullName,
+	"Date Of Birth":payload.born,
+	"Age":payload.currentAge,
+	"Playing Role":payload.playingRole,
+	"Play Style": {"Batting":payload.battingStyle,"Bowling":payload.bowlingStyle},
+	"Country" : payload.country,
+	"Major Teams":payload.majorTeams,
+	"Stats":{
+		"Batting":payload.data.batting,
+		"Bowling":payload.data.bowling
+	}
+	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	
+</flow>
+</mule>
