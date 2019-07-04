@@ -123,6 +123,7 @@
 								<password>${password}</password>
 								<applicationName>${cloudhub.application.name}</applicationName>
 								<environment>${environment}</environment>
+								<artifactId>maven-deploy-plugin</artifactId>
 							</cloudHubDeployment>
 						</configuration>
 						<executions>
