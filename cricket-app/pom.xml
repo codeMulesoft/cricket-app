@@ -123,6 +123,9 @@
 								<password>${password}</password>
 								<applicationName>${cloudhub.application.name}</applicationName>
 								<environment>${environment}</environment>
+								<workerType>MICRO</workerType>
+								<workers>1</workers>
+								<region>us-east-1</region>
 								<artifactId>maven-deploy-plugin</artifactId>
 							</cloudHubDeployment>
 						</configuration>
