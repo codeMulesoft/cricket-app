@@ -30,23 +30,31 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 	</flow>
 	<flow name="schedulePeriod-appFlow" doc:id="32f16966-3c7f-48e1-9873-692b6f30935e" >
 		<set-variable value='#[attributes.queryParams.team default ""]' doc:name="Set Variable" doc:id="8c65e575-070a-4d73-b684-189c5325a308" variableName="team"/>
-		<ee:transform doc:name="Set Dates" doc:id="d678b1a0-fcfa-4dfe-b13c-bce3cb68e1f5" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+		<choice doc:name="Choice" doc:id="2b210590-d7e5-433f-8ed1-06147f7bb4b2" >
+			<when expression='#[attributes.queryParams.startDate &lt; now() as Date {format : "yyyy-MM-dd" }]'>
+				<raise-error doc:name="Raise error" doc:id="cf59c163-dbc0-422f-bfa4-3649bc1a7f85" type="DATE:INVALID_RANGE" description="Provided start date cannot be less than current date"/>
+			</when>
+			<when expression='#[attributes.queryParams.endDate &lt; now() as Date {format : "yyyy-MM-dd" }]'>
+				<raise-error doc:name="Raise error" doc:id="8ac0369e-b0a6-47ff-88a2-c1a78d60f886" type="DATE:INVALID_RANGE" description="Provided end date cannot be less than current date"/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Set Dates" doc:id="d678b1a0-fcfa-4dfe-b13c-bce3cb68e1f5">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 {
 }]]></ee:set-payload>
 			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="fromDate" ><![CDATA[attributes.queryParams.startDate]]></ee:set-variable>
-				<ee:set-variable variableName="toDate" ><![CDATA[attributes.queryParams.endDate]]></ee:set-variable>
+			<ee:variables>
+				<ee:set-variable variableName="fromDate"><![CDATA[attributes.queryParams.startDate]]></ee:set-variable>
+				<ee:set-variable variableName="toDate"><![CDATA[attributes.queryParams.endDate]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<flow-ref doc:name="Flow Reference" doc:id="4834ee1a-21e4-4bd7-8730-b54d00694b64" name="allMatchesData" />
-		<ee:transform doc:name="Transform Message" doc:id="cb1f1c0c-24cb-4e69-9018-e8e214427fb8" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+				<flow-ref doc:name="Flow Reference" doc:id="4834ee1a-21e4-4bd7-8730-b54d00694b64" name="allMatchesData" />
+				<ee:transform doc:name="Transform Message" doc:id="cb1f1c0c-24cb-4e69-9018-e8e214427fb8">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 
 
 var scheduleStartDate=vars.fromDate as Date{format : "yyyy-M-d"} as String
@@ -72,28 +80,36 @@ payload.data filter(  ( TransformDate($.date).out >= scheduleStartDate )	and
 {
 	name:$.name,
 	date:$.date
-}  ]]></ee:set-payload>
+} default "Match Schedule Not Found" ]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+				<validation:is-not-null doc:name="Is not null" doc:id="09f346fb-33fe-49ce-81b0-f7c6e5ad7d35" config-ref="Validation_Config" value="#[payload[0]]" message="Match Schedule Not Found" />
+			</otherwise>
+		</choice>
 	</flow>
 	<flow name="scheduleDate-appFlow" doc:id="69c00fab-df67-43d7-8d3d-7d14b532dd79" >
-		<ee:transform doc:name="Transform Message" doc:id="1565e821-1152-4588-98ef-69698420d7d8" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+		<choice doc:name="Choice" doc:id="c6709d1a-9820-4c03-8b77-022ce837a2be" >
+			<when expression='#[attributes.queryParams.date &lt; now() as Date {format : "yyyy-MM-dd" }]'>
+				<raise-error doc:name="Raise error" doc:id="9fe7aa6a-772d-4cbf-b1d8-a4171f5e60b7" type="DATE:INVALID_RANGE" description="Provided date cannot be less than current date"/>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message" doc:id="1565e821-1152-4588-98ef-69698420d7d8">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 {
 }]]></ee:set-payload>
 			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="team" ><![CDATA[attributes.queryParams.team default ""]]></ee:set-variable>
-				<ee:set-variable variableName="date" ><![CDATA[attributes.queryParams.date]]></ee:set-variable>
+			<ee:variables>
+				<ee:set-variable variableName="team"><![CDATA[attributes.queryParams.team default ""]]></ee:set-variable>
+				<ee:set-variable variableName="date"><![CDATA[attributes.queryParams.date ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<flow-ref doc:name="Flow Reference" doc:id="ad395236-8d5b-4ce2-9e55-8d7359d96637" name="allMatchesData" />
-		<ee:transform doc:name="Transform Message" doc:id="af7365b0-394f-40ab-b1b5-14361dc2c105" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+				<flow-ref doc:name="Flow Reference" doc:id="ad395236-8d5b-4ce2-9e55-8d7359d96637" name="allMatchesData" />
+				<ee:transform doc:name="Transform Message" doc:id="af7365b0-394f-40ab-b1b5-14361dc2c105">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 
 
 var matchDate=vars.date as Date{format : "yyyy-M-d"} as String
@@ -112,15 +128,17 @@ payload.data filter( (TransformDate($.date).out == matchDate) and (upper($.name)
 {
 	name:$.name,
 	date:$.date
-} 	]]></ee:set-payload>
+} ]]></ee:set-payload>
 			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="date" ><![CDATA[%dw 2.0
+			<ee:variables>
+				<ee:set-variable variableName="date"><![CDATA[%dw 2.0
 output application/json
 ---
 attributes.queryParams.date]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+			</otherwise>
+		</choice>
 	</flow>
 	<flow name="schedule-appFlow" doc:id="4677f497-721e-4870-bf17-649171c903e7" >
 		<set-variable value='#[attributes.queryParams.team default ""]' doc:name="Set Variable" doc:id="aa90a517-1a70-4345-8277-0901fc7d93e3" variableName="team" />
@@ -217,7 +235,7 @@ output application/json
 	<flow name="playerIdFinder-appFlow" doc:id="5cbb6fc3-d573-488a-85e3-c2db975f73b7" >
 		<os:retrieve doc:name="Retrieve" doc:id="df04bc24-ae1a-47a0-9d73-d67c0ddaed96" key="#[vars.name]" objectStore="Object_store" />
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="bdfc88f9-f5ae-4d14-83f9-a30d95e50879" variableName="playerId"/>
-		<logger level="INFO" doc:name="Logger" doc:id="cf0b4bea-2525-444b-a1f4-73868e27c348" message="#[message]"/>
+		<logger level="DEBUG" doc:name="Logger" doc:id="cf0b4bea-2525-444b-a1f4-73868e27c348" message="#[message]"/>
 		<error-handler >
 			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c9451025-a2a6-430b-ad63-b8b6fb20d499" when="OS" type="OS:KEY_ALREADY_EXISTS, OS:KEY_NOT_FOUND, OS:NULL_VALUE, OS:STORE_NOT_AVAILABLE">
 				<http:request method="GET" doc:name="Request" doc:id="6bb8097b-9614-4cd8-871c-16743ddb8fd1" config-ref="HTTP_Request_configuration" path="/playerFinder" >
@@ -273,4 +291,5 @@ output application/json
 		</ee:transform>
 	
 </flow>
+
 </mule>
