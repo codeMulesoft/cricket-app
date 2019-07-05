@@ -53,6 +53,10 @@ traits:
         body:
           application/json:
             example: !include responses/scedule_response.json
+      500:
+        body:
+          application/json:
+            example: {"message": "Provided date cannot be less than current date"}    
     is: [error]
 
 /schedulePeriod:
@@ -132,7 +136,7 @@ traits:
             example:
               !include responses/player_response.json  
       430:
-        description: When an invalid search is made or when no player was found           with the requested name
+        description: When an invalid search is made or when no player was found with the requested name
         body:
           application/json:
             example:
